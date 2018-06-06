@@ -5,6 +5,7 @@ import threading
 import logging
 import salpytools.states as states
 import inspect
+from importlib import import_module
 import copy
 import itertools
 
@@ -50,7 +51,7 @@ def load_SALPYlib(Device):
         return SALPY_lib
     except:
         LOGGER.info('importing SALPY_{}'.format(Device))
-        exec "import SALPY_{}".format(Device)
+        exec("import SALPY_{}".format(Device))
     else:
         raise ValueError("import SALPY_{}: failed".format(Device))
     SALPY_lib = locals()['SALPY_{}'.format(Device)]
@@ -98,13 +99,13 @@ class DeviceState:
     def send_logEvent(self,eventname,**kwargs):
         ''' Send logevent for an eventname'''
         # Populate myData object for keys across logevent
-        self.myData[eventname].timestamp = kwargs.pop('timestamp',time.time())
+        # self.myData[eventname].timestamp = kwargs.pop('timestamp',time.time())
         self.myData[eventname].priority  = kwargs.pop('priority',1)
         priority = int(self.myData[eventname].priority)
 
         # Populate myData with the default cases
         if eventname == 'SummaryState':
-            self.myData[eventname].summaryState = states.state_enumeration[self.current_state] 
+            self.myData[eventname].SummaryStateValue = states.state_enumeration[self.current_state]
         if eventname == 'RejectedCommand':
             rejected_state = kwargs.get('rejected_state')
             next_state = states.next_state[rejected_state]
@@ -184,7 +185,7 @@ class DDSController(threading.Thread):
         self.newControl = False
 
         # Get the mgr
-        SALPY_lib = globals()['SALPY_{}'.format(self.module)]
+        SALPY_lib = import_module('SALPY_{}'.format(self.module)) #globals()['SALPY_{}'.format(self.module)]
         self.mgr = getattr(SALPY_lib, 'SAL_{}'.format(self.module))()
         self.mgr.salProcessor(self.topic)
         self.myData = getattr(SALPY_lib,self.topic+'C')()
@@ -217,7 +218,7 @@ class DDSController(threading.Thread):
             self.State.current_state = self.next_state
 
             if self.COMMAND == 'ENTERCONTROL':
-                self.State.send_logEvent("SettingVersions",recommendedSettingsVersion='blah')
+                # self.State.send_logEvent("SettingVersions", package_versions='master')
                 self.State.send_logEvent('SummaryState')
             elif self.COMMAND == 'START':
                 # Extract 'myData.configure' for START, eventually we
